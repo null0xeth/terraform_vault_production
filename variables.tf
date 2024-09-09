@@ -1,6 +1,50 @@
-variable "acme" {}
-variable "aws_iam_context" {}
-variable "aws_kms_context" {}
+variable "acme" {
+  type        = any
+  description = "Empty variable holding the ACME configuration, passed to the letsencrypt module."
+}
+
+variable "aws_kms_context" {
+  description = "Configuration of the AWS KMS key to be passed to the aws-bootstrap module."
+  type = object({
+    aws_kms_key_create = optional(bool)
+    aws_kms_key_config = optional(object({
+      description = optional(string)
+      rotation    = optional(bool)
+      deletion    = optional(number)
+    }))
+    aws_kms_key_policy = optional(object({
+      Id = optional(string)
+      Statement = optional(list(object({
+        Action    = optional(string)
+        Effect    = optional(string)
+        Principal = optional(map(any))
+        Resource  = optional(string)
+        Sid       = optional(string)
+      })))
+      Version = optional(string)
+    }))
+  })
+}
+
+variable "aws_iam_context" {
+  description = "Configuration of the IAM user to be passed to the aws-bootstrap module."
+  type = object({
+    aws_iam_user             = optional(string)
+    aws_iam_user_path        = optional(string)
+    aws_iam_user_tags        = optional(map(any))
+    aws_iam_user_policy_name = optional(string)
+
+    aws_iam_user_policy = optional(object({
+      Version = optional(string, "2012-10-17")
+      Statement = list(object({
+        Effect   = optional(string)
+        Action   = optional(list(string))
+        Resource = optional(string)
+      }))
+    }))
+  })
+  default = null
+}
 
 variable "provider_proxmox" {
   description = "bpg/proxmox provider configuration variables"
@@ -82,7 +126,7 @@ variable "cloud-init" {
 
 variable "cluster_spec" {
   # cluster_spec = { node_group = {} }
-  description = "Map of objects containing the cluster topology and configuration variables."
+  description = "Contains the cluster topology and configuration variables passed to the cluster module."
   type = map(object({
     component_id   = optional(string)
     component_size = optional(number, 3)
@@ -106,7 +150,7 @@ variable "cluster_spec" {
 
 ### MODULE: BASE/TEMPLATE_FILE ###########################################
 variable "templates" {
-  description = "Map containing objects with templates that we will be rendering."
+  description = "Map of Templates that we will be rendering in the template_renderer module"
   type        = map(any)
   default     = {}
 }
