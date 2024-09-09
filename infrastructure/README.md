@@ -21,7 +21,7 @@
 
 | Name | Source | Version |
 |------|--------|---------|
-| <a name="module_aws_bootstrap"></a> [aws\_bootstrap](#module\_aws\_bootstrap) | ../../../modules/aws_bootstrap | n/a |
+| <a name="module_aws_bootstrap"></a> [aws\_bootstrap](#module\_aws\_bootstrap) | github.com/null0xeth/aws_bootstrap | n/a |
 | <a name="module_cloud-init"></a> [cloud-init](#module\_cloud-init) | ../../../base/cloud-init | n/a |
 | <a name="module_deployment"></a> [deployment](#module\_deployment) | ../../../modules/vm_cluster | n/a |
 | <a name="module_letsencrypt_ssl"></a> [letsencrypt\_ssl](#module\_letsencrypt\_ssl) | ../../../modules/letsencrypt_ssl_cert | n/a |
