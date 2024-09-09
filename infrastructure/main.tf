@@ -1,53 +1,10 @@
-##### LOCAL VARIABLES #################################################
+######### LOCAL VARIABLES ###################################################################################
 locals {
   auth_bundle = {
     username = var.vm_username
     password = var.vm_password
     ssh_keys = var.vm_ssh_keys
   }
-}
-
-##### LETSENCRYPT CERTIFICATES #################################################
-module "letsencrypt_ssl" {
-  source = "../../../modules/letsencrypt_ssl_cert"
-  acme   = var.acme
-}
-
-##### AWS IAM USER #################################################
-module "aws_bootstrap" {
-  source          = "github.com/null0xeth/aws_bootstrap"
-  provider_aws    = var.provider_aws
-  aws_iam_context = var.aws_iam_context
-  aws_kms_context = var.aws_kms_context
-}
-
-##### CLOUD INIT PREP #################################################
-module "cloud-init" {
-  source           = "../../../base/cloud-init"
-  provider_proxmox = var.provider_proxmox
-  provider_aws     = var.provider_aws
-  cloud-init       = var.cloud-init
-}
-
-
-##### VM DEPLOYMENT #################################################
-module "deployment" {
-  source           = "../../../modules/vm_cluster"
-  auth_bundle      = local.auth_bundle
-  cloud_init_id    = module.cloud-init.id
-  cluster_spec     = var.cluster_spec
-  provider_proxmox = var.provider_proxmox
-  provider_aws     = var.provider_aws
-  resource_tags    = var.resource_tags
-
-  providers = {
-    aws     = aws
-    proxmox = proxmox
-  }
-}
-
-##### VM PROVISIONING ##########################################################
-locals {
   flatmap = zipmap(module.deployment.server_name, module.deployment.server_ipv4)
   merged_map = {
     for tpl_id, tpl_conf in var.templates : tpl_id => {
@@ -66,15 +23,51 @@ locals {
   }
 }
 
-##### LOCAL TEMPLATE CREATION #################################################
+######### MODULE: MODULES/LETSENCRYPT_SSL ###################################################################
+module "letsencrypt_ssl" {
+  source = "github.com/null0xeth/terraform_letsencrypt_certificate"
+  acme   = var.acme
+}
+
+######### MODULE: MODULES/AWS_BOOTSTRAP #####################################################################
+module "aws_bootstrap" {
+  source          = "github.com/null0xeth/terraform_aws_bootstrap"
+  provider_aws    = var.provider_aws
+  aws_iam_context = var.aws_iam_context
+  aws_kms_context = var.aws_kms_context
+}
+
+######### MODULE: BASE/CLOUD-INIT ###########################################################################
+module "cloud-init" {
+  source     = "github.com/null0xeth/terraform_pve_cloud_init"
+  cloud-init = var.cloud-init
+}
+
+######### MODULE: MODULES/VM_CLUSTER ########################################################################
+module "deployment" {
+  source           = "github.com/null0xeth/terraform_pve_vm_cluster"
+  auth_bundle      = local.auth_bundle
+  cloud_init_id    = module.cloud-init.id
+  cluster_spec     = var.cluster_spec
+  provider_proxmox = var.provider_proxmox
+  provider_aws     = var.provider_aws
+  resource_tags    = var.resource_tags
+
+  providers = {
+    aws     = aws
+    proxmox = proxmox
+  }
+}
+
+#########  MODULE: BASE/TEMPLATE_FILE #######################################################################
 module "render_ansible_templates" {
   for_each  = module.deployment.raw_map.vault_server
-  source    = "../../../base/template_file"
+  source    = "github.com/null0xeth/terraform_template_renderer"
   templates = local.merged_map
   node_id   = each.key
 }
 
-# ##### REMOTE PROVISIONING ###############################################
+#########  RESOURCES: PROVISIONING ##########################################################################
 resource "null_resource" "provisioning" {
   for_each = module.deployment.raw_map.vault_server
 
