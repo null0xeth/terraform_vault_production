@@ -4,7 +4,7 @@ variable "aws_kms_context" {}
 
 variable "provider_proxmox" {
   type = object({
-    endpoint          = optional(string, "https://pve.dirtyhonk.life:8006")
+    endpoint          = optional(string, "https://path.to.pve:8006")
     username          = optional(string, "root")
     agent_socket      = optional(string, "/run/current-system/sw/bin/ssh-agent")
     node              = optional(string, "pve")
@@ -46,7 +46,7 @@ variable "s3_bucket" {
     acl        = optional(string, "private")
     versioning = optional(string, "Enabled")
     lock       = optional(bool, true)
-    key        = optional(string, "terraform/stacks/by-id/honkfrastructure/terraform.tfstate")
+    key        = optional(string, "terraform/stacks/by-id/bucket/terraform.tfstate")
     table      = optional(string, "terraform-lock")
   })
   default = {}
@@ -56,7 +56,7 @@ variable "cloud-init" {
   type = object({
     general = optional(object({
       filename = optional(string, "cloud-init.yaml")
-      timezone = optional(string, "Europe/Amsterdam")
+      timezone = optional(string, "Your/Tz")
     }))
     network = optional(object({
       include  = optional(bool)
@@ -73,6 +73,7 @@ variable "cloud-init" {
 }
 
 variable "cluster_spec" {
+  # cluster_spec = { node_group = {} }
   type = map(object({
     component_id   = optional(string)
     component_size = optional(number, 3)
