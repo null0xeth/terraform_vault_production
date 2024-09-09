@@ -15,7 +15,7 @@ module "letsencrypt_ssl" {
 
 ##### AWS IAM USER #################################################
 module "aws_bootstrap" {
-  source          = "../../../modules/aws_bootstrap"
+  source          = "github.com/null0xeth/aws_bootstrap"
   provider_aws    = var.provider_aws
   aws_iam_context = var.aws_iam_context
   aws_kms_context = var.aws_kms_context
