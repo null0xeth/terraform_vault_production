@@ -3,6 +3,7 @@ variable "aws_iam_context" {}
 variable "aws_kms_context" {}
 
 variable "provider_proxmox" {
+  description = "bpg/proxmox provider configuration variables"
   type = object({
     endpoint          = optional(string, "https://path.to.pve:8006")
     username          = optional(string, "root")
@@ -14,6 +15,7 @@ variable "provider_proxmox" {
 }
 
 variable "provider_aws" {
+  description = "hashicorp/aws provider configuration variables"
   type = object({
     region = optional(string, "eu-west-1")
   })
@@ -21,26 +23,31 @@ variable "provider_aws" {
 }
 
 variable "vm_username" {
-  type    = string
-  default = "null0x"
+  description = "Name of the user that will access the created VMs"
+  type        = string
+  default     = "null0x"
 }
 
 variable "vm_password" {
-  type      = string
-  sensitive = true
+  description = "Note: export as env variable `TF_VAR_vm_password`. Password of the user that will access the created VMs."
+  type        = string
+  sensitive   = true
 }
 
 variable "vm_ssh_keys" {
-  type    = list(string)
-  default = ["ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMmJacbLyO/WVFf6GrMVx2l31xGxynWrAEkzX3+myQzW null0x@ansible"]
+  description = "List of public ssh keys to be added to the VMs"
+  type        = list(string)
+  default     = ["ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMmJacbLyO/WVFf6GrMVx2l31xGxynWrAEkzX3+myQzW null0x@ansible"]
 }
 
 variable "resource_tags" {
-  type    = list(string)
-  default = ["terraform", "infrastructure"]
+  description = "List of resource tags to be added to all created resources"
+  type        = list(string)
+  default     = ["terraform", "infrastructure"]
 }
 
 variable "s3_bucket" {
+  description = "Configuration of the S3 bucket where we will store remote state."
   type = object({
     name       = optional(string, "terraform-state")
     acl        = optional(string, "private")
@@ -53,6 +60,7 @@ variable "s3_bucket" {
 }
 
 variable "cloud-init" {
+  description = "Configuration variables passed to the cloud-init module"
   type = object({
     general = optional(object({
       filename = optional(string, "cloud-init.yaml")
@@ -74,6 +82,7 @@ variable "cloud-init" {
 
 variable "cluster_spec" {
   # cluster_spec = { node_group = {} }
+  description = "Map of objects containing the cluster topology and configuration variables."
   type = map(object({
     component_id   = optional(string)
     component_size = optional(number, 3)
@@ -97,8 +106,9 @@ variable "cluster_spec" {
 
 ### MODULE: BASE/TEMPLATE_FILE ###########################################
 variable "templates" {
-  type    = map(any)
-  default = {}
+  description = "Map containing objects with templates that we will be rendering."
+  type        = map(any)
+  default     = {}
 }
 
 
