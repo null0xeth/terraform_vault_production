@@ -1,24 +1,36 @@
 ######### LOCAL VARIABLES ###################################################################################
 locals {
-  auth_bundle = {
-    username = var.vm_username
-    password = var.vm_password
-    ssh_keys = var.vm_ssh_keys
+  flepmep = {
+    for category, child in module.deployment : category => zipmap(flatten([child.name]), (flatten(child.ipv4)))
   }
-  flatmap = zipmap(module.deployment.server_name, module.deployment.server_ipv4)
+  flatmap = zipmap(flatten(values(module.deployment)[*].server_name), flatten(values(module.deployment)[*].server_ipv4))
+
+
   merged_map = {
     for tpl_id, tpl_conf in var.templates : tpl_id => {
-      base_file = tpl_conf.base_file
-      source    = file("${tpl_conf.template_source}")
+      base_file       = tpl_conf.base_file
+      template_source = file("${tpl_conf.template_source}")
       variables = merge(tpl_conf.variables, {
-        ansible_map  = module.deployment.raw_map
+        ansible_map  = local.flepmep
         aws_user_map = module.aws_bootstrap.user
         region       = var.provider_aws.region
         aws_kms_map  = module.aws_bootstrap.kms
         dirty_map    = local.flatmap
       })
-      destination  = tpl_conf.local_destination
-      with_node_id = tpl_conf.with_node_id
+      local_destination = tpl_conf.local_destination
+      with_node_id      = tpl_conf.with_node_id
+    }
+  }
+
+  merged_ansible_map = {
+    for x, y in var.ansible_templates : x => {
+      base_file         = y.base_file
+      template_source   = file("${y.template_source}")
+      local_destination = y.local_destination
+      with_node_id      = y.with_node_id
+      variables = merge(y.variables, {
+        ansible_map = local.flepmep
+      })
     }
   }
 }
@@ -39,20 +51,28 @@ module "aws_bootstrap" {
 
 ######### MODULE: BASE/CLOUD-INIT ###########################################################################
 module "cloud-init" {
-  source     = "github.com/null0xeth/terraform_pve_cloud_init"
-  cloud-init = var.cloud-init
+  source           = "github.com/null0xeth/terraform_pve_cloud_init"
+  cloud-init       = var.cloud-init
+  provider_aws     = var.provider_aws
+  provider_proxmox = var.provider_proxmox
 }
 
 ######### MODULE: MODULES/VM_CLUSTER ########################################################################
 module "deployment" {
-  source           = "github.com/null0xeth/terraform_pve_vm_cluster"
-  auth_bundle      = local.auth_bundle
-  cloud_init_id    = module.cloud-init.id
-  cluster_spec     = var.cluster_spec
-  provider_proxmox = var.provider_proxmox
-  provider_aws     = var.provider_aws
-  resource_tags    = var.resource_tags
+  source   = "github.com/null0xeth/terraform_pve_vm"
+  for_each = var.cluster_spec
 
+  auth_bundle = {
+    username = var.vm_username
+    password = var.vm_password
+    ssh_keys = var.vm_ssh_keys
+  }
+
+  cloud_init_id    = module.cloud-init.id
+  cluster_spec     = each.value
+  resource_tags    = var.resource_tags
+  provider_aws     = var.provider_aws
+  provider_proxmox = var.provider_proxmox
   providers = {
     aws     = aws
     proxmox = proxmox
@@ -61,15 +81,20 @@ module "deployment" {
 
 #########  MODULE: BASE/TEMPLATE_FILE #######################################################################
 module "render_ansible_templates" {
-  for_each  = module.deployment.raw_map.vault_server
   source    = "github.com/null0xeth/terraform_template_renderer"
+  templates = local.merged_ansible_map
+}
+
+#########  RESOURCES: PROVISIONING ##########################################################################
+module "render_provisioning_templates" {
+  source    = "github.com/null0xeth/terraform_template_renderer"
+  for_each  = local.flepmep.vault_server
   templates = local.merged_map
   node_id   = each.key
 }
 
-#########  RESOURCES: PROVISIONING ##########################################################################
 resource "null_resource" "provisioning" {
-  for_each = module.deployment.raw_map.vault_server
+  for_each = local.flepmep.vault_server
 
   triggers = {
     always_run = "${timestamp()}"
@@ -117,7 +142,7 @@ resource "null_resource" "provisioning" {
 }
 
 resource "null_resource" "provisioning_qol" {
-  for_each = module.deployment.raw_map.vault_server
+  for_each = local.flepmep.vault_server
 
   triggers = {
     always_run = "${timestamp()}"

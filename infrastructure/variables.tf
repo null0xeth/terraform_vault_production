@@ -156,10 +156,11 @@ variable "cloud-init" {
 variable "cluster_spec" {
   description = "Contains the cluster topology and configuration variables passed to the cluster module."
   type = map(object({
-    component_id   = optional(string)
-    component_size = optional(number, 3)
     base_id        = optional(number, 300)
     base_name      = optional(string, "machine")
+    component_id   = optional(string)
+    component_size = optional(number, 3)
+    node           = optional(string, "pve")
 
     config = object({
       cpu_cores = optional(number, 4)
@@ -177,6 +178,12 @@ variable "cluster_spec" {
 }
 
 #########  MODULE: BASE/TEMPLATE_FILE ########################################################################
+variable "ansible_templates" {
+  description = "Map of Templates that we will be rendering in the template_renderer module"
+  type        = map(any)
+  default     = {}
+}
+
 variable "templates" {
   description = "Map of Templates that we will be rendering in the template_renderer module"
   type        = map(any)
